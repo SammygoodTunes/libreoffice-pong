@@ -1,162 +1,205 @@
-﻿
+REM *** libreoffice-pong by SammygoodTunes (2025) ***
+
 Option Explicit
 
-Global keyHandler
-Global paddleUp
-Global paddleDown
+Global KeyHandler
+Global PaddleUp
+Global PaddleDown
 Global PrevKey
+
+Global FrameW
+Global FrameH
 
 Sub Main
 
-Const MAX_ANGLE = 2 * 3.14159265358979 / 12
+FrameW = 78
+FrameH = 50
 
-Dim paddleX As Integer
-Dim paddleY As Integer
-Dim paddleW As Integer
-Dim paddleH As Integer
+Dim PaddleX As Integer
+Dim PaddleY As Integer
+Dim PaddleW As Integer
+Dim PaddleH As Integer
 
-Dim paddle2X As Integer
-Dim paddle2Y As Integer
-Dim paddle2W As Integer
-Dim paddle2H As Integer
+Dim Paddle2X As Integer
+Dim Paddle2Y As Integer
+Dim Paddle2W As Integer
+Dim Paddle2H As Integer
 
-Dim ballX As Double
-Dim ballY As Double
-Dim ballVelocityX As Double
-Dim ballVelocityY As Double
-Dim ballAngle As Double
+Dim BallX As Double
+Dim BallY As Double
+Dim BallPrevX As Double
+Dim BallPrevY As Double
+Dim BallVelocityX As Double
+Dim BallVelocityY As Double
+Dim BallAngle As Double
 
-Dim playerScore as Integer
-Dim opponentScore as Integer
+Dim PlayerScoreCell as Object
+Dim OpponentScoreCell as Object
+Dim PlayerScore as Integer
+Dim OpponentScore as Integer
 
-Dim clearBallTrail as Boolean
-
-playerScore = 0
-opponentScore = 0
-
-paddleX = 0
-paddleY = 0
-paddleH = 6
-
-paddle2X = 77
-paddle2Y = 0
-paddle2H = 6
-
-ballX = 77 \ 2
-ballY = 50 \ 2
-ballAngle = 45
-
-ballVelocityX = Cos(ballAngle)
-ballVelocityY = -Sin(ballAngle)
-
-If ballVelocityX = 0 Then 
-	ballVelocityX = -1
-End If
-If ballVelocityY = 0 Then 
-	ballVelocityY = -1
-End If
-
-paddleUp = False
-paddleDown = False
+Dim ClearBallTrail as Boolean
+Dim OpponentDelay as Double
+Dim Diff As Double
 
 Dim PongSheet As Object, Cell As Object
 
-keyHandler = CreateUnoListener("KeyHandler_", "com.sun.star.awt.XKeyHandler")
-ThisComponent.CurrentController.addKeyHandler(keyHandler)
+PlayerScore = 0
+OpponentScore = 0
+
+PaddleX = 0
+PaddleY = 0
+PaddleH = 6
+
+Paddle2X = FrameW - 1
+Paddle2Y = 0
+Paddle2H = 6
+
+OpponentDelay = (FrameW / 2.75 * Rnd)
+
+ResetBall(BallX, BallY, BallAngle, BallVelocityX, BallVelocityY)
+
+If BallVelocityX = 0 Then 
+	BallVelocityX = -1
+End If
+If BallVelocityY = 0 Then 
+	BallVelocityY = -1
+End If
+
+PaddleUp = False
+PaddleDown = False
+
+KeyHandler = CreateUnoListener("KeyHandler_", "com.sun.star.awt.XKeyHandler")
+ThisComponent.CurrentController.addKeyHandler(KeyHandler)
+
+If Not ThisComponent.Sheets.hasByName("PONG") Then
+	ThisComponent.Sheets.insertNewByName("PONG", ThisComponent.Sheets.getCount)
+End If
 
 PongSheet = ThisComponent.Sheets.getByName("PONG")
-PongSheet.getCellRangeByName("A1:BZ50").CellBackColor = RGB(255, 255, 255)
 PongSheet.getCellRangeByName("A1:BZ50").Rows.Height = 200
 PongSheet.getCellRangeByName("A1:BZ50").Columns.Width = 200
 
-DrawPaddle(PongSheet, paddleX, paddleY, paddleH)
-DrawPaddle(PongSheet, paddle2X, paddle2Y, paddle2H)
+ClearAndRedraw(PongSheet, PaddleX, PaddleY, PaddleH, Paddle2X, Paddle2Y, Paddle2H)
 
-PongSheet.getCellRangeByName("CA51").String = "Player Score: " & playerScore
-PongSheet.getCellRangeByName("CB51").String = "Opponent Score: " & opponentScore
+PlayerScoreCell = PongSheet.getCellRangeByName("CA51")
+OpponentScoreCell = PongSheet.getCellRangeByName("CB51")
+PlayerScoreCell.Columns.Width = 2700
+PlayerScoreCell.String = "Player Score: " & PlayerScore
+OpponentScoreCell.Columns.Width = 3200
+OpponentScoreCell.String = "Opponent Score: " & OpponentScore
 
 While True
-	clearBallTrail = True
+	ClearBallTrail = True
+	BallPrevX = BallX
+	BallPrevY = BallY
 	ThisComponent.getCurrentController().select(PongSheet.getCellByPosition(0, 0))
 
-	If paddleUp And paddleY > 0 Then
-		paddleY = paddleY - 1
-		PongSheet.getCellByPosition(paddleX, paddleY).CellBackColor = RGB(0, 0, 0)
-		PongSheet.getCellByPosition(paddleX, paddleY + paddleH + 1).CellBackColor = RGB(255, 255, 255)
+	If PaddleUp And PaddleY > 0 Then
+		PaddleY = PaddleY - 1
+		PongSheet.getCellByPosition(PaddleX, PaddleY).CellBackColor = RGB(0, 0, 0)
+		PongSheet.getCellByPosition(PaddleX, PaddleY + PaddleH + 1).CellBackColor = RGB(255, 255, 255)
 	End If
 	
-	If paddleDown And paddleY < 49 - paddleH Then
-		paddleY = paddleY + 1
-		PongSheet.getCellByPosition(paddleX, paddleY - 1).CellBackColor = RGB(255, 255, 255)
-		PongSheet.getCellByPosition(paddleX, paddleY + paddleH).CellBackColor = RGB(0, 0, 0)
+	If PaddleDown And PaddleY < FrameH - 1 - PaddleH Then
+		PaddleY = PaddleY + 1
+		PongSheet.getCellByPosition(PaddleX, PaddleY - 1).CellBackColor = RGB(255, 255, 255)
+		PongSheet.getCellByPosition(PaddleX, PaddleY + PaddleH).CellBackColor = RGB(0, 0, 0)
 	End If
 	
-	If ballY < paddle2Y And paddle2Y > 0 Then
-		paddle2Y = paddle2Y - 1
-		PongSheet.getCellByPosition(paddle2X, paddle2Y).CellBackColor = RGB(0, 0, 0)
-		PongSheet.getCellByPosition(paddle2X, paddle2Y + paddle2H + 1).CellBackColor = RGB(255, 255, 255)
+	If Paddle2Y > 0 And BallY < Paddle2Y And BallX > FrameW \ 2 + OpponentDelay Then
+		Paddle2Y = Paddle2Y - 1
+		PongSheet.getCellByPosition(Paddle2X, Paddle2Y).CellBackColor = RGB(0, 0, 0)
+		PongSheet.getCellByPosition(Paddle2X, Paddle2Y + Paddle2H + 1).CellBackColor = RGB(255, 255, 255)
 
 	End If
 	
-	If ballY > paddle2Y + paddle2H And paddle2Y < 49 - paddle2H Then
-		paddle2Y = paddle2Y + 1
-		PongSheet.getCellByPosition(paddle2X, paddle2Y - 1).CellBackColor = RGB(255, 255, 255)
-		PongSheet.getCellByPosition(paddle2X, paddle2Y + paddle2H).CellBackColor = RGB(0, 0, 0)
+	If Paddle2Y < FrameH - 1 - Paddle2H And BallY > Paddle2Y + Paddle2H And BallX > FrameW \ 2 + OpponentDelay Then
+		Paddle2Y = Paddle2Y + 1
+		PongSheet.getCellByPosition(Paddle2X, Paddle2Y - 1).CellBackColor = RGB(255, 255, 255)
+		PongSheet.getCellByPosition(Paddle2X, Paddle2Y + Paddle2H).CellBackColor = RGB(0, 0, 0)
 	End If
 	
 	
-	If Int(ballX) < 1 Then
-		If Int(ballY) < paddleY Or Int(ballY) > paddleY + paddleH Then
-			MsgBox "You lose"
-			opponentScore = opponentScore + 1
-			ballX = 77 \ 2
-			ballY = 50 \ 2
-			ballAngle = Int((10 * Rnd) + 45)
-			ballVelocityX = Cos(ballAngle)
-			ballVelocityY = -Sin(ballAngle)
-			PongSheet.getCellRangeByName("CB51").String = "Opponent Score: " & opponentScore
+	If Int(BallX) < 1 Then
+		If Int(BallY) < PaddleY Or Int(BallY) > PaddleY + PaddleH Then
+			PongSheet.getCellByPosition(Int(BallX), Int(BallY)).CellBackColor = RGB(255, 255, 255)
+			OpponentScore = OpponentScore + 1
+			ResetBall(BallX, BallY, BallAngle, BallVelocityX, BallVelocityY)
+			PongSheet.getCellRangeByName("CB51").String = "Opponent Score: " & OpponentScore
+			If BallVelocityX < 0 Then
+				BallVelocityX = -BallVelocityX
+			EndIf
+			ClearAndRedraw(PongSheet, PaddleX, PaddleY, PaddleH, Paddle2X, Paddle2Y, Paddle2H)
 		Else
-			clearBallTrail = False
-			PongSheet.getCellByPosition(Int(ballX), Int(ballY)).CellBackColor = RGB(0, 0, 0)
-			ballVelocityX = -ballVelocityX
+			Diff = ((PaddleY + PaddleH / 2) - BallY) / (PaddleH / 2)
+			ClearBallTrail = False
+			PongSheet.getCellByPosition(Int(BallX), Int(BallY)).CellBackColor = RGB(0, 0, 0)
+			BallAngle = (5 * 3.141592 / 12) * Diff
+			UpdateBallVelocity(BallAngle, BallVelocityX, BallVelocityY)
+			If BallVelocityX < 0 Then
+				BallVelocityX = -BallVelocityX
+			EndIf
+			OpponentDelay = (FrameW / 2.75 * Rnd)
 		End If
 	End If
 	
-	If Int(ballX) > 76 Then
-		If Int(ballY) < paddle2Y Or Int(ballY) > paddle2Y + paddle2H Then
-			MsgBox "You win"
-			playerScore = playerScore + 1
-			ballX = 77 \ 2
-			ballY = 50 \ 2
-			ballAngle = Int((10 * Rnd) + 45)
-			ballVelocityX = Cos(ballAngle)
-			ballVelocityY = -Sin(ballAngle)
-			PongSheet.getCellRangeByName("CA51").String = "Player Score: " & playerScore
+	If Int(BallX) > FrameW - 2 Then
+		If Int(BallY) < Paddle2Y Or Int(BallY) > Paddle2Y + Paddle2H Then
+			PongSheet.getCellByPosition(Int(BallX), Int(BallY)).CellBackColor = RGB(255, 255, 255)
+			PlayerScore = PlayerScore + 1
+			ResetBall(BallX, BallY, BallAngle, BallVelocityX, BallVelocityY)
+			PongSheet.getCellRangeByName("CA51").String = "Player Score: " & PlayerScore
+			If BallVelocityX > 0 Then
+				BallVelocityX = -BallVelocityX
+			EndIf
+			ClearAndRedraw(PongSheet, PaddleX, PaddleY, PaddleH, Paddle2X, Paddle2Y, Paddle2H)
 		Else
-			clearBallTrail = False
-			PongSheet.getCellByPosition(Int(ballX), Int(ballY)).CellBackColor = RGB(0, 0, 0)
-			ballVelocityX = -ballVelocityX
+			Diff = ((Paddle2Y + Paddle2H / 2) - BallY) / (Paddle2H / 2)
+			ClearBallTrail = False
+			PongSheet.getCellByPosition(Int(BallX), Int(BallY)).CellBackColor = RGB(0, 0, 0)
+			BallAngle = (5 * 3.141592 / 12) * Diff
+			UpdateBallVelocity(BallAngle, BallVelocityX, BallVelocityY)
+			BallVelocityX = -BallVelocityX
 		End If
 	End If
 	
-	if Int(ballY) < 1 Or Int(ballY) > 48 Then
-		ballVelocityY = -ballVelocityY
+	if Int(BallY) < 1 Or Int(BallY) > FrameH - 2 Then
+		BallVelocityY = -BallVelocityY
 	End If
 	
-	ballX = ballX + ballVelocityX
-	ballY = ballY + ballVelocityY
-	If clearBallTrail Then
-		PongSheet.getCellByPosition(Int(ballX - ballVelocityX), Int(ballY - ballVelocityY)).CellBackColor = RGB(255, 255, 255)
+	BallX = BallX + BallVelocityX
+	BallY = BallY + BallVelocityY
+	If ClearBallTrail And (Int(BallPrevX) <> Int(BallX) Or Int(BallPrevY) <> Int(BallY)) Then
+		PongSheet.getCellByPosition(Int(BallPrevX), Int(BallPrevY)).CellBackColor = RGB(255, 240, 240)
+		PongSheet.getCellByPosition(Int(BallX), Int(BallY)).CellBackColor = RGB(255, 0, 0)
 	End If
-	PongSheet.getCellByPosition(Int(ballX), Int(ballY)).CellBackColor = RGB(0, 0, 0)
 		
 WEnd
 End Sub
 
-Function DrawPaddle(ByRef PongSheet as Object, ByRef paddleX as Integer, ByRef paddleY as Integer, ByRef paddleH as Integer)
+Function UpdateBallVelocity(ByRef BallAngle as Double, ByRef BallVelocityX as Double, ByRef BallVelocityY as Double)
+	BallVelocityX = Cos(BallAngle)
+	BallVelocityY = -Sin(BallAngle)
+End Function
+
+Function ResetBall(ByRef BallX as Double, ByRef BallY as Double, ByRef BallAngle as Double, ByRef BallVelocityX, ByRef BallVelocityY)
+	BallX = Int(FrameW / 2)
+	BallY = Int(FrameH / 2)
+	BallAngle = Int((10 * Rnd) + 20)	
+	UpdateBallVelocity(BallAngle, BallVelocityX, BallVelocityY)
+End Function
+
+Function ClearAndRedraw(ByRef PongSheet as Object, PaddleX as Integer, PaddleY as Integer, PaddleH as Integer, Paddle2X as Integer, Paddle2Y as Integer, Paddle2H as Integer)
+	PongSheet.getCellRangeByName("A1:BZ50").CellBackColor = RGB(255, 255, 255)
+	DrawPaddle(PongSheet, PaddleX, PaddleY, PaddleH)
+	DrawPaddle(PongSheet, Paddle2X, Paddle2Y, Paddle2H)
+End Function
+
+Function DrawPaddle(ByRef PongSheet as Object, ByRef PaddleX as Integer, ByRef PaddleY as Integer, ByRef PaddleH as Integer)
 	Dim i as Integer
-	For i = 0 To paddleH
-		PongSheet.getCellByPosition(paddleX, paddleY + i).CellBackColor = RGB(0, 0, 0)
+	For i = 0 To PaddleH
+		PongSheet.getCellByPosition(PaddleX, PaddleY + i).CellBackColor = RGB(0, 0, 0)
 	Next i
 End Function
 
@@ -165,10 +208,10 @@ Function KeyHandler_keyPressed(Event as Object) as Boolean
 		Exit Function
 	End If
 	If Event.KeyCode = com.sun.star.awt.Key.UP Then
-		paddleUp = True
+		PaddleUp = True
 	End If
 	If Event.KeyCode = com.sun.star.awt.Key.DOWN Then
-		paddleDown = True
+		PaddleDown = True
 	End If
 	PrevKey = Event.KeyCode
 	KeyHandler_keyPressed = False
@@ -176,14 +219,13 @@ End Function
 
 Function KeyHandler_keyReleased(Event as Object) as Boolean
 	If Event.KeyCode = com.sun.star.awt.Key.UP Then
-		paddleUp = False
+		PaddleUp = False
 		PrevKey = Empty
 	End If
 	If Event.KeyCode = com.sun.star.awt.Key.DOWN Then
-		paddleDown = False
+		PaddleDown = False
 		PrevKey = Empty
 	End If
 	KeyHandler_keyReleased = False
 End Function
-
 
