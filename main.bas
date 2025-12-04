@@ -98,6 +98,7 @@ OpponentScoreCell.String = "Opponent Score: " & OpponentScore
 MsgBox "Pong by SammygoodTunes (2025) - Press SPACE on title screen to start"
 
 While True
+	Wait 25
 	If ClearScreenFlag Then
 		ClearAndRedraw(PongSheet, PaddleX, PaddleY, PaddleH, Paddle2X, Paddle2Y, Paddle2H)
 		ClearScreenFlag = False
@@ -122,14 +123,14 @@ While True
 			PongSheet.getCellByPosition(PaddleX, PaddleY + PaddleH).CellBackColor = RGB(0, 0, 0)
 		End If
 		
-		If Paddle2Y > 0 And BallY < Paddle2Y And BallX > FrameW \ 2 + OpponentDelay Then
+		If Paddle2Y > 0 And BallY < Paddle2Y + Paddle2H / 2.5 And BallX > FrameW \ 2 + OpponentDelay Then
 			Paddle2Y = Paddle2Y - 1
 			PongSheet.getCellByPosition(Paddle2X, Paddle2Y).CellBackColor = RGB(0, 0, 0)
 			PongSheet.getCellByPosition(Paddle2X, Paddle2Y + Paddle2H + 1).CellBackColor = RGB(255, 255, 255)
 	
 		End If
 		
-		If Paddle2Y < FrameH - 1 - Paddle2H And BallY > Paddle2Y + Paddle2H And BallX > FrameW \ 2 + OpponentDelay Then
+		If Paddle2Y < FrameH - 1 - Paddle2H And BallY > Paddle2Y + Paddle2H / 1.5 And BallX > FrameW \ 2 + OpponentDelay Then
 			Paddle2Y = Paddle2Y + 1
 			PongSheet.getCellByPosition(Paddle2X, Paddle2Y - 1).CellBackColor = RGB(255, 255, 255)
 			PongSheet.getCellByPosition(Paddle2X, Paddle2Y + Paddle2H).CellBackColor = RGB(0, 0, 0)
@@ -137,7 +138,7 @@ While True
 		
 		
 		If Int(BallX) < 1 Then
-			If Int(BallY) < PaddleY Or Int(BallY) > PaddleY + PaddleH Then
+			If Int(BallY) < PaddleY Or Int(BallY) > PaddleY + PaddleH + 1 Then
 				PongSheet.getCellByPosition(Int(BallX), Int(BallY)).CellBackColor = RGB(255, 255, 255)
 				OpponentScore = OpponentScore + 1
 				ResetBall(BallX, BallY, BallAngle, BallVelocityX, BallVelocityY)
@@ -155,7 +156,7 @@ While True
 				If BallVelocityX < 0 Then
 					BallVelocityX = -BallVelocityX
 				EndIf
-				OpponentDelay = (FrameW / 2.75 * Rnd)
+				OpponentDelay = (FrameW / 3.25 * Rnd)
 			End If
 		End If
 		
@@ -195,7 +196,7 @@ While True
 			DrawTitle(PongSheet)
 		End If
 	End If
-	Wait 25	
+		
 WEnd
 End Sub
 
@@ -359,4 +360,3 @@ Function KeyHandler_keyReleased(Event as Object) as Boolean
 	End If
 	KeyHandler_keyReleased = False
 End Function
-
