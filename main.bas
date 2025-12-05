@@ -13,6 +13,7 @@ Global FrameH
 Global Start
 Global ClearScreenFlag
 Global DrawTitleFlag
+Global DrawObstacleFlag
 
 Sub Main
 
@@ -37,13 +38,18 @@ Dim BallVelocityX As Double
 Dim BallVelocityY As Double
 Dim BallAngle As Double
 
-Dim PlayerScoreCell as Object
-Dim OpponentScoreCell as Object
-Dim PlayerScore as Integer
-Dim OpponentScore as Integer
+Dim ObstacleX As Integer
+Dim ObstacleY As Integer
+Dim ObstacleH As Integer
+Dim ObstacleDuration As Integer
 
-Dim ClearBallTrail as Boolean
-Dim OpponentDelay as Double
+Dim PlayerScoreCell As Object
+Dim OpponentScoreCell As Object
+Dim PlayerScore As Integer
+Dim OpponentScore As Integer
+
+Dim ClearBallTrail As Boolean
+Dim OpponentDelay As Double
 Dim Diff As Double
 
 Dim PongSheet As Object, Cell As Object
@@ -51,6 +57,12 @@ Dim PongSheet As Object, Cell As Object
 Start = False
 ClearScreenFlag = False
 DrawTitleFlag = True
+DrawObstacleFlag = False
+
+ObstacleX = 0
+ObstacleY = 0
+ObstacleH = 0
+ObstacleDuration = 0
 
 PlayerScore = 0
 OpponentScore = 0
@@ -98,7 +110,6 @@ OpponentScoreCell.String = "Opponent Score: " & OpponentScore
 MsgBox "Pong by SammygoodTunes (2025) - Press SPACE on title screen to start"
 
 While True
-	Wait 25
 	If ClearScreenFlag Then
 		ClearAndRedraw(PongSheet, PaddleX, PaddleY, PaddleH, Paddle2X, Paddle2Y, Paddle2H)
 		ClearScreenFlag = False
@@ -110,6 +121,15 @@ While True
 		BallPrevX = BallX
 		BallPrevY = BallY
 		ThisComponent.getCurrentController().select(PongSheet.getCellByPosition(0, 0))
+		
+		If Int(600 * Rnd) = 0 And ObstacleDuration <= 0 Then
+			ObstacleX = Int(((FrameW \ 3) * Rnd) + FrameW \ 3)
+			ObstacleH = Int((FrameH - FrameH \ 4 - 10) * Rnd + 10)
+			ObstacleY = Int((FrameH - ObstacleH - 1) * Rnd)
+			ObstacleDuration = Int(750 * Rnd + 250)
+			DrawObstacleFlag = True
+		End If
+		
 	
 		If PaddleUp And PaddleY > 0 Then
 			PaddleY = PaddleY - 1
@@ -147,6 +167,9 @@ While True
 					BallVelocityX = -BallVelocityX
 				EndIf
 				ClearAndRedraw(PongSheet, PaddleX, PaddleY, PaddleH, Paddle2X, Paddle2Y, Paddle2H)
+				If ObstacleDuration > 0 Then
+					DrawObstacle(PongSheet, ObstacleX, ObstacleY, ObstacleH)
+				End If
 			Else
 				Diff = ((PaddleY + PaddleH / 2) - BallY) / (PaddleH / 2)
 				ClearBallTrail = False
@@ -170,6 +193,9 @@ While True
 					BallVelocityX = -BallVelocityX
 				EndIf
 				ClearAndRedraw(PongSheet, PaddleX, PaddleY, PaddleH, Paddle2X, Paddle2Y, Paddle2H)
+				If ObstacleDuration > 0 Then
+					DrawObstacle(PongSheet, ObstacleX, ObstacleY, ObstacleH)
+				End If
 			Else
 				Diff = ((Paddle2Y + Paddle2H / 2) - BallY) / (Paddle2H / 2)
 				ClearBallTrail = False
@@ -180,15 +206,48 @@ While True
 			End If
 		End If
 		
-		if Int(BallY) < 1 Or Int(BallY) > FrameH - 2 Then
+		If Int(BallY) < 1 Or Int(BallY) > FrameH - 2 Then
 			BallVelocityY = -BallVelocityY
 		End If
 		
 		BallX = BallX + BallVelocityX
 		BallY = BallY + BallVelocityY
+		
 		If ClearBallTrail And (Int(BallPrevX) <> Int(BallX) Or Int(BallPrevY) <> Int(BallY)) Then
 			PongSheet.getCellByPosition(Int(BallPrevX), Int(BallPrevY)).CellBackColor = RGB(255, 240, 240)
 			PongSheet.getCellByPosition(Int(BallX), Int(BallY)).CellBackColor = RGB(255, 0, 0)
+		End If
+		
+		
+		If ObstacleDuration > 0 And Int(BallPrevY) >= ObstacleY - 1 And Int(BallPrevY) <= ObstacleY + ObstacleH + 1 And Int(BallPrevX) = ObstacleX Then
+			If Int(BallY) <> ObstacleY - 1 And Int(BallY) <> ObstacleY + ObstacleH + 1 Then
+				PongSheet.getCellByPosition(Int(BallPrevX), Int(BallPrevY)).CellBackColor = RGB(150, 150, 150)
+			Endif
+		End If
+		
+		If ObstacleDuration > 0 And Int(BallY) >= ObstacleY - 1 And Int(BallY) <= ObstacleY + ObstacleH + 1 And Int(BallX) = ObstacleX Then
+			If Int(BallY) = ObstacleY - 1 Or Int(BallY) = ObstacleY + ObstacleH + 1 Then
+				BallVelocityY = -BallVelocityY
+			Else
+				BallVelocityX = -BallVelocityX
+				PongSheet.getCellByPosition(Int(BallX), Int(BallY)).CellBackColor = RGB(150, 150, 150)
+			Endif
+		End If
+		
+		
+		
+		If ObstacleDuration > 0 Then
+			ObstacleDuration = ObstacleDuration - 1
+			If ObstacleDuration = 0 Then
+				ClearObstacle(PongSheet, ObstacleX, ObstacleY, ObstacleH)
+			End If
+		End If
+
+		If DrawObstacleFlag Then
+			If ObstacleDuration > 0 Then
+				DrawObstacle(PongSheet, ObstacleX, ObstacleY, ObstacleH)
+			End If
+			DrawObstacleFlag = False
 		End If
 	Else
 		If DrawTitleFlag Then
@@ -196,36 +255,51 @@ While True
 			DrawTitle(PongSheet)
 		End If
 	End If
-		
+	Wait 25
 WEnd
 End Sub
 
-Function UpdateBallVelocity(ByRef BallAngle as Double, ByRef BallVelocityX as Double, ByRef BallVelocityY as Double)
+Function UpdateBallVelocity(ByRef BallAngle As Double, ByRef BallVelocityX As Double, ByRef BallVelocityY As Double)
 	BallVelocityX = Cos(BallAngle)
 	BallVelocityY = -Sin(BallAngle)
 End Function
 
-Function ResetBall(ByRef BallX as Double, ByRef BallY as Double, ByRef BallAngle as Double, ByRef BallVelocityX, ByRef BallVelocityY)
+Function ResetBall(ByRef BallX As Double, ByRef BallY As Double, ByRef BallAngle As Double, ByRef BallVelocityX, ByRef BallVelocityY)
 	BallX = Int(FrameW / 2)
 	BallY = Int(FrameH / 2)
 	BallAngle = Int((10 * Rnd) + 20)	
 	UpdateBallVelocity(BallAngle, BallVelocityX, BallVelocityY)
 End Function
 
-Function ClearAndRedraw(ByRef PongSheet as Object, PaddleX as Integer, PaddleY as Integer, PaddleH as Integer, Paddle2X as Integer, Paddle2Y as Integer, Paddle2H as Integer)
+Function ClearAndRedraw(ByRef PongSheet As Object, PaddleX As Integer, PaddleY As Integer, PaddleH As Integer, Paddle2X As Integer, Paddle2Y As Integer, Paddle2H As Integer)
 	PongSheet.getCellRangeByName("A1:BZ50").CellBackColor = RGB(255, 255, 255)
 	DrawPaddle(PongSheet, PaddleX, PaddleY, PaddleH)
 	DrawPaddle(PongSheet, Paddle2X, Paddle2Y, Paddle2H)
 End Function
 
-Function DrawPaddle(ByRef PongSheet as Object, ByRef PaddleX as Integer, ByRef PaddleY as Integer, ByRef PaddleH as Integer)
-	Dim i as Integer
+Function DrawPaddle(ByRef PongSheet As Object, ByRef PaddleX As Integer, ByRef PaddleY As Integer, ByRef PaddleH As Integer)
+	Dim i As Integer
 	For i = 0 To PaddleH
 		PongSheet.getCellByPosition(PaddleX, PaddleY + i).CellBackColor = RGB(0, 0, 0)
 	Next i
 End Function
 
-Function DrawTitle(ByRef PongSheet as Object)
+Function DrawObstacle(ByRef PongSheet As Object, ByRef ObstacleX As Integer, ByRef ObstacleY As Integer, ByRef ObstacleH As Integer)
+	Dim i As Integer
+	For i = 0 To ObstacleH
+		PongSheet.getCellByPosition(ObstacleX, ObstacleY + i).CellBackColor = RGB(150, 150, 150)
+	Next i
+End Function
+
+Function ClearObstacle(ByRef PongSheet As Object, ByRef ObstacleX As Integer, ByRef ObstacleY As Integer, ByRef ObstacleH As Integer)
+	Dim i As Integer
+	For i = 0 To ObstacleH
+		PongSheet.getCellByPosition(ObstacleX, ObstacleY + i).CellBackColor = RGB(255, 255, 255)
+	Next i
+End Function
+
+
+Function DrawTitle(ByRef PongSheet As Object)
 	PongSheet.getCellRangeByName("A1:BZ50").CellBackColor = RGB(255, 255, 255)
 	PongSheet.getCellRangeByName("AC11:AC16").CellBackColor = RGB(0, 0, 0)
 	PongSheet.getCellRangeByName("AD11:AE11").CellBackColor = RGB(0, 0, 0)
@@ -327,7 +401,7 @@ Function DrawTitle(ByRef PongSheet as Object)
 	PongSheet.getCellRangeByName("G27:BT27").CellBackColor = RGB(0, 0, 0)
 End Function
 
-Function KeyHandler_keyPressed(Event as Object) as Boolean
+Function KeyHandler_keyPressed(Event As Object) As Boolean
 	If PrevKey = Event.KeyCode Then
 		Exit Function
 	End If
@@ -341,12 +415,13 @@ Function KeyHandler_keyPressed(Event as Object) as Boolean
 		Start = Not Start
 		ClearScreenFlag = Start
 		DrawTitleFlag = Not Start
+		DrawObstacleFlag = Start
 	End If
 	PrevKey = Event.KeyCode
 	KeyHandler_keyPressed = False
 End Function
 
-Function KeyHandler_keyReleased(Event as Object) as Boolean
+Function KeyHandler_keyReleased(Event As Object) As Boolean
 	If Event.KeyCode = com.sun.star.awt.Key.UP Then
 		PaddleUp = False
 		PrevKey = Empty
